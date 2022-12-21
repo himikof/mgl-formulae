@@ -1,0 +1,76 @@
+?expr: conditional
+    | ("let" _sep_by{var_bind, ","} ";" expr) -> let
+
+?conditional: any [ "?" any GWS? ":" expr ]
+?any: all ("||" all)*
+?all: coalesce ("&&" coalesce)*
+
+?coalesce: (binop_eq "??")* binop_eq
+
+?binop_eq: [ binop_ord EQ_OP ] binop_ord
+?binop_ord: [ concat ORD_OP ] concat
+
+?concat: binop_add ("&" binop_add)*
+
+?binop_add: [ binop_add ADD_OP ] binop_mul
+?binop_mul: [ binop_mul MUL_OP ] binop_exp
+?binop_exp: unary_op [ "^" binop_exp ]
+
+?unary_op: atom
+    | "-" atom -> unary_neg
+    | "!" atom -> unary_not
+
+EQ_OP: "==" | "!="
+ORD_OP: "<=" | ">=" | "<" | ">" | "in"
+ADD_OP: "+" | "-"
+MUL_OP: "*" | "/" | "%"
+
+?atom: VAR_REF -> var
+    | "match" "(" _match_args ")" -> match
+    | _if_else_chain -> if_else_chain
+    | call_expr
+    | complex_literal -> literal_expr
+    | scalar_literal
+    | "(" expr ")"
+
+_match_args: expr "," ((scalar_literal | complex_literal) "," expr ",")* expr
+
+_if_else_chain: "if" "(" expr ")" GWS? "{" GWS? expr GWS? "}" "else" (_if_else_chain | "{" GWS? expr GWS? "}")
+
+call_expr: KWARGS_FUNC "(" _sep_by{_expr_or_kwargs, ","}? ")" -> call_kwargs
+    | IDENT "(" _sep_by{expr, ","}? ")" -> call
+
+_expr_or_kwargs: kwargs | expr
+kwargs.1: "{" _sep_by{kwargs_item, ","}? "}"
+kwargs_item: ESCAPED_STRING ":" expr
+
+?complex_literal: "[" _sep_by{literal_value, ","}? "]" -> literal_list
+    | "{" _sep_by{dict_item, ","}? "}"                 -> literal_dict
+    | RAW_LITERAL  // fake: never matches during parsing
+
+scalar_literal: SIGNED_NUMBER -> num
+    | ESCAPED_STRING          -> str
+    | BOOL_LITERAL            -> bool
+    | "null"                  -> null
+
+?literal_value: complex_literal | scalar_literal
+dict_item: ESCAPED_STRING ":" literal_value
+
+var_bind: VAR_REF [ "=" expr ]
+
+_sep_by{element, sep}: element (sep element)*
+
+VAR_REF: "$" IDENT
+KWARGS_FUNC: "collator" | "format" | "number_format"
+BOOL_LITERAL: "true" | "false"
+RAW_LITERAL: /\A\B\b.\Z/  // Never matching non-zero width regexp - this token can only be produced by reconstruction
+GWS: RAW_LITERAL
+
+%import common.CNAME -> IDENT
+%import common.SIGNED_NUMBER
+%import common.ESCAPED_STRING
+%import common.WS
+%import common.CPP_COMMENT -> COMMENT
+
+%ignore WS
+%ignore COMMENT

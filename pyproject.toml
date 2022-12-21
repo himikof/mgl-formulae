@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "mgl-formulae"
+version = "0.0.0"
+description = """\
+    Conversion to/from a human-oriented formula representation \
+    for mapbox-gl expression language\
+    """
+authors = ["Nikita Ofitserov <himikof@gmail.com>"]
+readme = "README.md"
+license = "Apache-2.0"
+repository = "https://github.com/himikof/mgl-formulae"
+classifiers = [
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Software Development :: Compilers",
+]
+packages = [{include = "mgl_formulae", from = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+lark = "^1.1.4"
+
+# Needs to be kept in sync with tox.ini:testenv.deps
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.0"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+substitution.folders = [{path = "src"}]
+substitution.files = ["*/__version__.py"]
+
+[build-system]
+requires = ["poetry-core", "poetry-dynamic-versioning"]
+build-backend = "poetry_dynamic_versioning.backend"
